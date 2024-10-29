@@ -2,10 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-
 public class MainManager : MonoBehaviour
 {
     public Brick BrickPrefab;
@@ -21,24 +23,29 @@ public class MainManager : MonoBehaviour
     private int m_Points;
     
     private bool m_GameOver = false;
-    private string bestName;
-    private int bestScore;
-    private MenuUI staticData;
-
+    private InputField staticData;
+    private SaveDatas jsonData;
+    private Dictionary<string,int> listJson;
+    private string player;
     void Awake()
     {
-
-        LoadData();
-        if (bestName!=null)
+        jsonData=GameObject.Find("JsonData").GetComponent<SaveDatas>();
+        listJson=jsonData.LoadData();
+       
+        UpdateScore();
+        if (listJson==null)
         {
-            UpdateScore1();
+            listJson=new Dictionary<string, int>();
         }
+          
+        Debug.Log(listJson);
     }
     // Start is called before the first frame update
     void Start()
     {
-        staticData=GameObject.Find("StaticData").GetComponent<MenuUI>();
-        name=staticData.GetName();
+        staticData=GameObject.Find("StaticData").GetComponent<InputField>();
+        player=staticData.GetName();
+        Debug.Log("Player is "+player);
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -74,7 +81,7 @@ public class MainManager : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                SceneManager.LoadScene(0);
             }
         }
     }
@@ -91,42 +98,37 @@ public class MainManager : MonoBehaviour
         GameOverText.SetActive(true);
         UpdateScore1();
     }
-    [Serializable]
-    class SaveDatas
+    
+    
+ private void UpdateScore()
+ {
+    if ( listJson!= null) 
     {
-        public string name;
-        public int bestScore;
+    var sortedDict = listJson.OrderByDescending(x => x.Value).ToDictionary(x => x.Key, x => x.Value);
+    
+    ScoreText1.text = $"Best Score {sortedDict.Values.First()} Name : {sortedDict.Keys.First()}";
     }
-    public void SaveData()
+    else
     {
-        SaveDatas data=new SaveDatas();
-        data.name=name;
-        data.bestScore=m_Points;
-        string js=JsonUtility.ToJson(data);
-        File.WriteAllText(Application.persistentDataPath+"/savefile.json",js);
-    } 
-    public void LoadData()
-    {
-        string path = Application.persistentDataPath + "/savefile.json";
-        if(File.Exists(path))
-        {
-            string js=File.ReadAllText(path);
-            SaveDatas data=JsonUtility.FromJson<SaveDatas>(js);
-            bestName=data.name;
-            bestScore=data.bestScore;
-        }
+        ScoreText1.text = $"Best Score - Name : -";
     }
+ }
     private void UpdateScore1()
     {
-        if (m_Points>bestScore)
+       if ((listJson==null)||(!listJson.ContainsKey(player)))
+       {
+            listJson.Add(player,m_Points);
+            
+
+       }
+        else if (listJson[player]<m_Points)
         {
-          bestScore=m_Points;
-          bestName=name;
-          SaveData();
-
+            listJson[player]=m_Points;
+   
         }
-        ScoreText1.text = $"Best Score {bestScore} Name : {bestName}";
-        
-
+        jsonData.SaveData(listJson);
     }
-}
+    }
+
+
+

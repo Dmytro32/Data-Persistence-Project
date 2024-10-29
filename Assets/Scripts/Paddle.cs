@@ -4,10 +4,18 @@ using UnityEngine;
 
 public class Paddle : MonoBehaviour
 {
-    public float Speed = 2.0f;
-    public float MaxMovement = 2.0f;
+    public float Speed ;
+    public float MaxMovement ;
+    Settings sets;
     
     // Start is called before the first frame update
+    void Awake()
+    {
+        sets=GameObject.Find("Settings").GetComponent<Settings>();
+        Settings.ProcessData data=sets.LoadData();
+        Speed=data.speed;
+        MaxMovement=data.MaxPower; 
+    }
     void Start()
     {
         
